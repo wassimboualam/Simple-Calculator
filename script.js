@@ -1,101 +1,156 @@
-const preOperand = document.querySelector(".pre-operand");
-const curOperand = document.querySelector(".cur-operand");
-const buttons = [...document.querySelectorAll("button")];
-const numbers = buttons.filter(btn => !isNaN(btn.innerHTML)? 1:0);
-const operations = buttons.filter(btn => ("+-*/".includes(btn.innerHTML))? 1:0);
-const period = buttons.find(btn => btn.innerHTML === ".");
-const AC = buttons.find(btn => btn.innerHTML === "AC");
-const DEL = buttons.find(btn => btn.innerHTML === "DEL");
-const equals = buttons.find(btn => btn.innerHTML === "=");
 
-function addNum() {
-    if (curOperand.innerHTML == "") curOperand.innerHTML = "";
-    curOperand.innerHTML += this.innerHTML;
-}
+// create Calculator class
+class Calculator {
 
-function addPeriod() {
-    if (curOperand.innerHTML.includes(".")) return ;
-    curOperand.innerHTML += this.innerHTML;
-}
+    constructor(preOperandElement, curOperandElement){
+        // set preOperandElement and curOperandElement as class properties
+        this.preOperandElement = preOperandElement;
+        this.curOperandElement = curOperandElement;
+        this.clear();
+    }
 
-function addOperation() {
-    if (isNaN(curOperand.innerHTML)) return ; 
-    if (!preOperand.innerHTML) {
-        preOperand.innerHTML = curOperand.innerHTML + " " + this.innerHTML;
-        curOperand.innerHTML = "";
-    } else {
-        if (curOperand) {
-            preOperand.innerHTML = operate() + " " + this.innerHTML;
-            curOperand.innerHTML = '';
+    // set/reset default values of preOperand curOperand and operation
+    clear() {
+        this.curOperand = "";
+        this.preOperand = "";
+        this.operation = undefined;
+    }
+
+    delete() {
+        // curOperand equals curOperand without the last character
+        this.curOperand = this.curOperand.slice(0, -1);
+    }
+
+    // add a number when clicked
+    appendNumber(number) {
+        // to prevent multiple periods 
+        if (number == "." && this.curOperand.includes(".")) return ;
+        this.curOperand += number;
+    }
+
+    chooseOperation(operation) {
+        // break if current and previous operand is empty
+        if (this.curOperand === "" && this.preOperand === "") {
+            return ;
+        }
+        // change operator if current operand is empty and previous operand isn't
+        else if (this.curOperand === "" && this.preOperand !== ""){
+            this.operation = operation;
+            return ;
+        }
+        // if there is content is previous operand while clicking operation button
+        else if (this.preOperand !== "" && this.curOperand !== "") {
+            this.compute();
+        }
+        // send result to preOperand and empty curOperand
+        this.preOperand = this.curOperand;
+        this.curOperand = "";
+        // update operation
+        this.operation = operation;
+    }
+
+    // to do calculations
+    compute() {
+        let result ;
+        // turn both values to floating point numbers
+        const pre = parseFloat(this.preOperand);
+        const cur = parseFloat(this.curOperand);
+        // if either one is empty, break
+        if (isNaN(pre) || isNaN(cur)) return ;
+        // value of result is dependant on operation
+        switch (this.operation) {
+            case "+":
+                result = pre + cur;
+                break;
+            case "-":
+                result = pre - cur;
+                break;
+            case "*":
+                result = pre * cur;
+                break;
+            case "/":
+                result = pre / cur;
+                break;
+            default:
+                return ;
+                break;
+        }
+        // store result, empty preOperand and operation
+        this.curOperand = result;
+        this.preOperand = "";
+        this.operation = undefined;
+    }
+
+    // getDisplayNumber(1234567890) => 1,234,567,890
+    getDisplayNumber(number) {
+        const stringNumber = number.toString().split(".");
+        const integerDigits = parseFloat(stringNumber[0]);
+        const floatDigits = stringNumber[1];
+        let integerDisplay ;
+        if (isNaN(integerDigits)) {
+            integerDisplay = "";
         } else {
-            preOperand.innerHTML = preOperand.innerHTML.slice(0,-1) + this.innerHTML;
+            integerDisplay = integerDigits.toLocaleString("en", {maximumFractionDigits : 0});
+        }
+        if (floatDigits != null) {
+            return integerDisplay+"."+floatDigits;
+        } else {
+            return integerDisplay;
         }
     }
-}
 
-function allClear() {
-    if (curOperand.innerHTML) {
-        curOperand.innerHTML = "";
-    } else {
-        preOperand.innerHTML = "";
+    // displays the current and previous operands in their respective elements
+    updateDisplay() {
+        this.curOperandElement.innerHTML = this.getDisplayNumber(this.curOperand);
+        
+        this.preOperandElement.innerHTML = 
+            this.getDisplayNumber(this.preOperand) +
+            (this.operation? " " + this.operation : "");
     }
 }
 
-function del() {
-    if (curOperand.innerHTML) {
-        curOperand.innerHTML = curOperand.innerHTML.slice(0,-1);
-    } else {
-        allClear();
-    }
-}
 
-function operate() {
 
-    const operator = preOperand.innerHTML.slice(-1);
-    const num1 = Number(preOperand.innerHTML.slice(0,-1));
-    const num2 = Number(curOperand.innerHTML);
-    switch (operator) {
-        case "+":
-            return num1 + num2;
-            break;
-        case "-":
-            return num1 - num2;
-            break;
-        case "*":
-            return num1 * num2;
-            break;
-        case "/":
-            if (num2 == 0) {
-                alert("division by 0 is a no-no");
-            } else return num1 / num2;
-            break;
-                            
-        default:
-            alert("there is a problem, idk");
-            break;
-    }
-}
 
-function showEquals() {
-    const result = operate();
-    if (!result) return ;
-    curOperand.innerHTML = result;
+// select all buttons 
+const numberButtons = document.querySelectorAll("[data-number]");
+const operationButtons = document.querySelectorAll("[data-operation]");
+const equalsButton = document.querySelector("[data-equals]");
+const allClearButton = document.querySelector("[data-all-clear]");
+const deleteButton = document.querySelector("[data-delete]");
+const preOperandElement = document.querySelector(".pre-operand");
+const curOperandElement = document.querySelector(".cur-operand");
 
-    preOperand.innerHTML = "";
-}
+// create Calculator object
+const calculator = new Calculator(preOperandElement, curOperandElement);
 
-numbers.forEach(num => {
-    num.addEventListener("click", addNum);
+// hook up the buttons with event listeners
+
+numberButtons.forEach(button => {
+    button.addEventListener("click", () => {
+        calculator.appendNumber(button.innerHTML);
+        calculator.updateDisplay();
+    })
 })
 
-period.addEventListener("click", addPeriod);
-
-operations.forEach(operation => {
-    operation.addEventListener("click", addOperation);
+operationButtons.forEach(button => {
+    button.addEventListener("click", () => {
+        calculator.chooseOperation(button.innerHTML);
+        calculator.updateDisplay();
+    })
 })
 
-DEL.addEventListener("click", del);
+allClearButton.addEventListener("click", () => {
+    calculator.clear();
+    calculator.updateDisplay();
+})
 
-AC.addEventListener("click", allClear);
+deleteButton.addEventListener("click", () => {
+    calculator.delete();
+    calculator.updateDisplay();
+})
 
-equals.addEventListener("click", showEquals);
+equalsButton.addEventListener("click", button => {
+    calculator.compute();
+    calculator.updateDisplay();
+})
